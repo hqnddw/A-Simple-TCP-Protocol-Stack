@@ -3,11 +3,35 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
 
 using namespace std;
 
 void get_URL(const string &host, const string &path) {
     // Your code here.
+    Address addr(host, "http");
+    // cout << "ip:port: " << addr.to_string() << endl;
+    TCPSocket tcp_scocket;
+    tcp_scocket.connect(addr);
+
+    stringstream ss;
+    ss << "GET " << path << " HTTP/1.1\r\n";
+    ss << "Host: cs144.keithw.org\r\n";
+    ss << "Connection: close\r\n";
+    ss << "\r\n";
+
+    string send_message = ss.str();
+    // cout << send_message << endl;
+    size_t n = tcp_scocket.write(send_message, send_message.size());
+    if (n != send_message.size()) {
+        cerr << "call write error, expect size: " << send_message.size() << ", actual size: " << n;
+        return;
+    }
+    string message;
+    while (!tcp_scocket.eof()) {
+        tcp_scocket.read(message, 1024);
+        cout << message;
+    }
 
     // You will need to connect to the "http" service on
     // the computer whose name is in the "host" string,
@@ -17,8 +41,8 @@ void get_URL(const string &host, const string &path) {
     // (not just one call to read() -- everything) until you reach
     // the "eof" (end of file).
 
-    cerr << "Function called: get_URL(" << host << ", " << path << ").\n";
-    cerr << "Warning: get_URL() has not been implemented yet.\n";
+    // cerr << "Function called: get_URL(" << host << ", " << path << ").\n";
+    // cerr << "Warning: get_URL() has not been implemented yet.\n";
 }
 
 int main(int argc, char *argv[]) {
