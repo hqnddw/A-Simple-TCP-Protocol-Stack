@@ -62,7 +62,7 @@ bool ByteStream::input_ended() const { return _error; }
 
 size_t ByteStream::buffer_size() const { return _buffer.size(); }
 
-bool ByteStream::buffer_empty() const { return _buffer.size() == 0; }
+bool ByteStream::buffer_empty() const { return _buffer.empty(); }
 
 bool ByteStream::eof() const { return input_ended() && buffer_empty(); }
 

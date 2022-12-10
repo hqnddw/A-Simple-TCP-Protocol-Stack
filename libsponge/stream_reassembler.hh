@@ -4,7 +4,15 @@
 #include "byte_stream.hh"
 
 #include <cstdint>
+#include <map>
 #include <string>
+
+using namespace std;
+
+struct DataSegment {
+    string data = "";
+    bool eof = false;
+};
 
 //! \brief A class that assembles a series of excerpts from a byte stream (possibly out of order,
 //! possibly overlapping) into an in-order byte stream.
@@ -14,7 +22,9 @@ class StreamReassembler {
 
     ByteStream _output;  //!< The reassembled in-order byte stream
     size_t _capacity;    //!< The maximum number of bytes
-
+    map<size_t, DataSegment> _stream_assembler;
+    size_t _next_index;
+    size_t _unassemble_size;
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
     //! \note This capacity limits both the bytes that have been reassembled,
