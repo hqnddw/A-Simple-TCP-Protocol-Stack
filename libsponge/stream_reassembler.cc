@@ -50,50 +50,7 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
             _stream_assembler[cur_index] = DataSegment{input, cur_eof};
             _unassemble_size += input.size();
         } else {
-            bool flag = true;
-            auto it = _stream_assembler.begin();
-            while (it != _stream_assembler.end()) {
-                if (cur_index < it->first) {
-                    if (cur_index + input.size() < it->first) {
-                        cout << "--------enter if if 1---------" << endl;
-                        break;
-                    } else if (cur_index + input.size() == it->first) {
-                        cout << "--------enter if if 2---------" << endl;
-                        // 合并后进入下一次循环
-                        input.append(it->second.data);
-                        cur_eof |= it->second.eof;
-                        it = _stream_assembler.erase(it);
-                    } else if (cur_index + input.size() > it->first &&
-                               cur_index + input.size() <= it->first + it->second.data.size()) {
-                        cout << "--------enter if if 3---------" << endl;
-                        input = input.substr(0, it->first - cur_index);
-                        input.append(it->second.data);
-                        cur_eof |= it->second.eof;
-                        it = _stream_assembler.erase(it);
-                    } else if (cur_index + input.size() > it->first + it->second.data.size()) {
-                        cout << "--------enter if if 4---------" << endl;
-                        cur_eof |= it->second.eof;
-                        it = _stream_assembler.erase(it);
-                    }
-                } else if (cur_index >= it->first && cur_index <= it->first + it->second.data.size()) {
-                    if (cur_index + input.size() <= it->first + it->second.data.size()) {
-                        flag = false;
-                        cout << "--------enter if if 5---------" << endl;
-                        break;
-                    } else if (cur_index + input.size() > it->first + it->second.data.size()) {
-                        cout << "--------enter if if 6---------" << endl;
-                        string tmp = input.substr(it->first + it->second.data.size() - cur_index);
-                        input = it->second.data.append(tmp);
-                        cur_index = it->first;
-                        cur_eof |= it->second.eof;
-                        it = _stream_assembler.erase(it);
-                    }
-                } else {
-                    cout << "--------enter if if 7---------" << endl;
-                    it++;
-                }
-            }
-            if (flag) {
+            if (merge_segment(input, cur_index, cur_eof)) {
                 _stream_assembler[cur_index] = DataSegment{input, cur_eof};
                 _unassemble_size += input.size();
             }
@@ -103,51 +60,7 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
             _output.write(input);
             _next_index += input.size();
         } else {
-            bool flag = true;
-            auto it = _stream_assembler.begin();
-            while (it != _stream_assembler.end()) {
-                if (cur_index < it->first) {
-                    if (cur_index + input.size() < it->first) {
-                        cout << "--------enter if 1---------" << endl;
-                        break;
-                    } else if (cur_index + input.size() == it->first) {
-                        cout << "--------enter if 2---------" << endl;
-                        // 合并后进入下一次循环
-                        flag = true;
-                        input.append(it->second.data);
-                        cur_eof |= it->second.eof;
-                        it = _stream_assembler.erase(it);
-                    } else if (cur_index + input.size() > it->first &&
-                               cur_index + input.size() <= it->first + it->second.data.size()) {
-                        cout << "--------enter if 3---------" << endl;
-                        input = input.substr(0, it->first - cur_index);
-                        input.append(it->second.data);
-                        cur_eof |= it->second.eof;
-                        it = _stream_assembler.erase(it);
-                    } else if (cur_index + input.size() > it->first + it->second.data.size()) {
-                        cout << "--------enter if 4---------" << endl;
-                        cur_eof |= it->second.eof;
-                        it = _stream_assembler.erase(it);
-                    }
-                } else if (cur_index >= it->first && cur_index <= it->first + it->second.data.size()) {
-                    if (cur_index + input.size() <= it->first + it->second.data.size()) {
-                        flag = false;
-                        cout << "--------enter if 5---------" << endl;
-                        break;
-                    } else if (cur_index + input.size() > it->first + it->second.data.size()) {
-                        cout << "--------enter if 6---------" << endl;
-                        string tmp = input.substr(it->first + it->second.data.size() - cur_index);
-                        input = it->second.data.append(tmp);
-                        cur_index = it->first;
-                        cur_eof |= it->second.eof;
-                        it = _stream_assembler.erase(it);
-                    }
-                } else {
-                    cout << "--------enter if 7---------" << endl;
-                    it++;
-                }
-            }
-            if (flag) {
+            if (merge_segment(input, cur_index, cur_eof)) {
                 _output.write(input);
                 _next_index += input.size();
             }
@@ -155,11 +68,67 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
     }
 
     if (cur_eof && _stream_assembler.empty()) {
-        // cout << "------------set_error------------" << endl;
         _output.set_error();
     }
 
     return;
+}
+
+// 合并input和stream_assembler中的数据段
+bool StreamReassembler::merge_segment(string &input, size_t &cur_index, bool &cur_eof) {
+    bool flag = true;
+    auto it = _stream_assembler.begin();
+    while (it != _stream_assembler.end()) {
+        /*
+                        |-----it-----|
+        |---input---|
+        |------input----|
+        |----------input---------|
+         */
+        if (cur_index < it->first) {
+            if (cur_index + input.size() < it->first) {
+                break;
+            } else if (cur_index + input.size() == it->first) {
+                // 合并后进入下一次循环
+                flag = true;
+                input.append(it->second.data);
+                cur_eof |= it->second.eof;
+                it = _stream_assembler.erase(it);
+            } else if (cur_index + input.size() > it->first &&
+                       cur_index + input.size() <= it->first + it->second.data.size()) {
+                input = input.substr(0, it->first - cur_index);
+                input.append(it->second.data);
+                cur_eof |= it->second.eof;
+                it = _stream_assembler.erase(it);
+            } else if (cur_index + input.size() > it->first + it->second.data.size()) {
+                cur_eof |= it->second.eof;
+                it = _stream_assembler.erase(it);
+            }
+            /*
+                |---------it-------|
+                    |---input---|
+                    |------input------|
+            */
+        } else if (cur_index >= it->first && cur_index <= it->first + it->second.data.size()) {
+            if (cur_index + input.size() <= it->first + it->second.data.size()) {
+                flag = false;
+                break;
+            } else if (cur_index + input.size() > it->first + it->second.data.size()) {
+                string tmp = input.substr(it->first + it->second.data.size() - cur_index);
+                input = it->second.data.append(tmp);
+                cur_index = it->first;
+                cur_eof |= it->second.eof;
+                it = _stream_assembler.erase(it);
+            }
+            /*
+            |------it-----|
+                            |---input---|
+            */
+        } else {
+            it++;
+        }
+    }
+    return flag;
 }
 
 size_t StreamReassembler::unassembled_bytes() const {

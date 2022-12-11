@@ -25,6 +25,7 @@ class StreamReassembler {
     map<size_t, DataSegment> _stream_assembler;
     size_t _next_index;
     size_t _unassemble_size;
+
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
     //! \note This capacity limits both the bytes that have been reassembled,
@@ -56,6 +57,9 @@ class StreamReassembler {
     //! \brief Is the internal state empty (other than the output stream)?
     //! \returns `true` if no substrings are waiting to be assembled
     bool empty() const;
+
+  private:
+    bool merge_segment(string& input, size_t& cur_index, bool& cur_eof);
 };
 
 #endif  // SPONGE_LIBSPONGE_STREAM_REASSEMBLER_HH
